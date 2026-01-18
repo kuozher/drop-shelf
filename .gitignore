@@ -1,0 +1,20 @@
+# Swift / Xcode
+.build/
+.swiftpm/
+*.xcodeproj
+*.xcworkspace
+DerivedData/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Build Artifacts
+DropShelf.dmg
+DropShelf.app/
+dmg_staging/
+
+# User Specific
+xcuserdata/
+assets/devlog.md
