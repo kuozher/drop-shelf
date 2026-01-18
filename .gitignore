@@ -16,5 +16,5 @@ DropShelf.app/
 dmg_staging/
 
 # User Specific
-xcuserdata/
-assets/devlog.md
+# xcuserdata/
+# (Removed devlog.md from ignore list as it should be tracked)
