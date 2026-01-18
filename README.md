@@ -82,6 +82,6 @@ MIT License. Feel free to modify and distribute.
 
 ## ✍️ Author's Note
 
-Initially, my goal was simply to create a lightweight alternative to Adobe Reader, despite having limited knowledge of deep frontend or backend coding. Consequently, the execution of this project was entrusted almost entirely to AI—specifically, 90% of the code was generated using the Google Gemini CLI (Gemini Pro 3 model), with my role serving as the adjudicator of its suggestions.
+Initially, my goal was simply to create a lightweight alternative to Adobe Reader, despite having limited knowledge of deep frontend or backend coding. Consequently, the execution of this project was entrusted almost entirely to AI—specifically, 90% of the code was generated using the Google Antigravity, with my role serving as the adjudicator of its suggestions.
 
 I realize some might dismiss this as just another piece of 'AI slop' created by someone who doesn't understand the underlying code rules. However, that doesn't matter to me. When problems arose, they were solved; when decisions were needed, I grasped the context and acted on logic. A tool is ultimately just a tool, and my only hope is that the final product brings real value to its users.
