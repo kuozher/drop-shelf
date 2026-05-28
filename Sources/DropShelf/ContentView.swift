@@ -62,7 +62,7 @@ struct ContentView: View {
                 Button(action: {
                     NSApp.sendAction(#selector(AppDelegate.hideWindow), to: nil, from: nil)
                 }) {
-                    Image(systemName: settings.position.rawValue.contains("left") ? "chevron.left.2" : "chevron.right.2")
+                    Image(systemName: settings.position == .topCenter ? "chevron.up.2" : (settings.position.rawValue.contains("left") ? "chevron.left.2" : "chevron.right.2"))
                         .font(.system(size: 14, weight: .bold))
                         .foregroundColor(hoverHide ? .blue : .gray)
                         .frame(width: 24, height: 24)

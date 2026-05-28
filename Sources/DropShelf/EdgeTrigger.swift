@@ -20,45 +20,61 @@ class EdgeTrigger: ObservableObject {
             guard let self = self else { return }
             let mouseLocation = NSEvent.mouseLocation
             
-            // 1. Edge Detection (Right side of the screen containing mouse)
+            // 1. Edge Detection (Active screen containing mouse)
             if let targetScreen = NSScreen.screens.first(where: { NSMouseInRect(mouseLocation, $0.frame, false) }) {
                 let position = AppSettings.shared.position
                 let screenHeight = targetScreen.frame.height
                 let screenMinY = targetScreen.frame.minY
                 let screenMaxY = targetScreen.frame.maxY
                 
-                // 1. Horizontal Check (Left vs Right)
-                var isHorizontalMatch = false
-                let isLeft = position.rawValue.contains("left")
-                
-                if isLeft {
-                    if mouseLocation.x <= targetScreen.frame.minX + threshold { isHorizontalMatch = true }
-                } else {
-                    if mouseLocation.x >= targetScreen.frame.maxX - threshold { isHorizontalMatch = true }
-                }
-                
-                if isHorizontalMatch {
-                    // 2. Vertical Range Check (Top / Center / Bottom)
-                    var validMinY: CGFloat = 0
-                    var validMaxY: CGFloat = 0
+                if position == .topCenter {
+                    // Top Center detection: mouse is at the top edge of screen, horizontally centered (middle 40%)
+                    let screenWidth = targetScreen.frame.width
+                    let screenMinX = targetScreen.frame.minX
                     
-                    if position.rawValue.contains("Top") {
-                        // Top 40%
-                        validMinY = screenMaxY - (screenHeight * 0.40)
-                        validMaxY = screenMaxY
-                    } else if position.rawValue.contains("Bottom") {
-                        // Bottom 40%
-                        validMinY = screenMinY
-                        validMaxY = screenMinY + (screenHeight * 0.40)
-                    } else {
-                        // Center 40% (Top 30% and Bottom 30% are dead zones)
-                        validMinY = screenMinY + (screenHeight * 0.30)
-                        validMaxY = screenMaxY - (screenHeight * 0.30)
-                    }
+                    let isAtTopEdge = mouseLocation.y >= screenMaxY - threshold
+                    let centerMinX = screenMinX + (screenWidth * 0.3)
+                    let centerMaxX = screenMinX + (screenWidth * 0.7)
+                    let isAtHorizontalCenter = mouseLocation.x >= centerMinX && mouseLocation.x <= centerMaxX
                     
-                    if mouseLocation.y >= validMinY && mouseLocation.y <= validMaxY {
+                    if isAtTopEdge && isAtHorizontalCenter {
                         print("Edge detected inside valid zone (\(position.rawValue)) at \(mouseLocation)")
                         self.trigger()
+                    }
+                } else {
+                    // 1. Horizontal Check (Left vs Right)
+                    var isHorizontalMatch = false
+                    let isLeft = position.rawValue.contains("left")
+                    
+                    if isLeft {
+                        if mouseLocation.x <= targetScreen.frame.minX + threshold { isHorizontalMatch = true }
+                    } else {
+                        if mouseLocation.x >= targetScreen.frame.maxX - threshold { isHorizontalMatch = true }
+                    }
+                    
+                    if isHorizontalMatch {
+                        // 2. Vertical Range Check (Top / Center / Bottom)
+                        var validMinY: CGFloat = 0
+                        var validMaxY: CGFloat = 0
+                        
+                        if position.rawValue.contains("Top") {
+                            // Top 40%
+                            validMinY = screenMaxY - (screenHeight * 0.40)
+                            validMaxY = screenMaxY
+                        } else if position.rawValue.contains("Bottom") {
+                            // Bottom 40%
+                            validMinY = screenMinY
+                            validMaxY = screenMinY + (screenHeight * 0.40)
+                        } else {
+                            // Center 40% (Top 30% and Bottom 30% are dead zones)
+                            validMinY = screenMinY + (screenHeight * 0.30)
+                            validMaxY = screenMaxY - (screenHeight * 0.30)
+                        }
+                        
+                        if mouseLocation.y >= validMinY && mouseLocation.y <= validMaxY {
+                            print("Edge detected inside valid zone (\(position.rawValue)) at \(mouseLocation)")
+                            self.trigger()
+                        }
                     }
                 }
             }

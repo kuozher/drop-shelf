@@ -100,7 +100,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Ensure starting position is correct for transition
         var startRect = targetRect
-        if settings.position.rawValue.contains("right") {
+        if settings.position == .topCenter {
+            startRect.origin.y = (NSScreen.main?.frame.maxY ?? 1200) + 20
+        } else if settings.position.rawValue.contains("right") {
             startRect.origin.x = (NSScreen.main?.frame.width ?? 2000) + 20
         } else {
             startRect.origin.x = -windowSize.width - 20
@@ -131,7 +133,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let windowSize = panel.frame.size
         
         var targetRect = calculatePosition(for: settings.position, screenFrame: screenFrame, windowSize: windowSize)
-        if settings.position.rawValue.contains("right") {
+        if settings.position == .topCenter {
+            targetRect.origin.y = screenFrame.maxY + 20
+        } else if settings.position.rawValue.contains("right") {
             targetRect.origin.x = screenFrame.width + 20
         } else {
             targetRect.origin.x = -windowSize.width - 20
@@ -178,6 +182,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         case .rightBottom:
             x = screenFrame.maxX - windowSize.width - margin
             y = margin
+        case .topCenter:
+            x = screenFrame.midX - (windowSize.width / 2)
+            y = screenFrame.maxY - windowSize.height - margin
         }
         
         return NSRect(x: x, y: y, width: windowSize.width, height: windowSize.height)

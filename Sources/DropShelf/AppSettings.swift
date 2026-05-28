@@ -3,6 +3,7 @@ import SwiftUI
 enum ScreenPosition: String, CaseIterable, Identifiable {
     case leftTop, leftCenter, leftBottom
     case rightTop, rightCenter, rightBottom
+    case topCenter
     
     var id: String { self.rawValue }
     
@@ -14,6 +15,7 @@ enum ScreenPosition: String, CaseIterable, Identifiable {
         case .rightTop: return "Right Top"
         case .rightCenter: return "Right Center"
         case .rightBottom: return "Right Bottom"
+        case .topCenter: return "Top Center"
         }
     }
 }
