@@ -5,7 +5,7 @@
 ![Platform](https://img.shields.io/badge/platform-macOS-lightgrey)
 ![Language](https://img.shields.io/badge/language-Swift_5-orange)
 ![License](https://img.shields.io/badge/license-MIT-blue)
-![Version](https://img.shields.io/badge/version-1.0.0-green)
+![Version](https://img.shields.io/badge/version-1.0.1-green)
 
 **DropShelf** is a lightweight, native macOS utility that makes drag-and-drop operations easier. It provides a temporary "shelf" to hold files, images, and text while you navigate between different applications or spaces.
 
@@ -31,7 +31,7 @@
 
 - **Float on Top**: Always accessible but never steals focus (`NSPanel`).
 - **Smart Triggers**:
-  - **Dynamic Edge Trigger**: Trigger area adjusts based on screen position setting (Top/Center/Bottom) to avoid accidental activation.
+  - **Dynamic Edge Trigger**: Trigger area adjusts based on screen position setting (Top/Center/Bottom/Top-Center) to avoid accidental activation.
   - **Flick Activation**: Simply flick your mouse to the designated edge zone.
 - **Native Drag & Drop**:
   - **First Mouse Support**: Drag items out directly from the background without clicking to focus first.
@@ -72,7 +72,7 @@ open DropShelf.app
 
 ## ⚙️ Settings
 Click the **Gear Icon** to customize:
-- **Position**: Left/Right edge, Top/Center/Bottom alignment.
+- **Position**: Left/Right edge (Top/Center/Bottom alignment) or Top Center.
 - **Display Limit**: How many items to show at once.
 - **Quit/Restart**: App management controls.
 
