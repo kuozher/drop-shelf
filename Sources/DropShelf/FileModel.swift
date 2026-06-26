@@ -15,6 +15,21 @@ class FileShelfViewModel: ObservableObject {
     @Published var files: [FileItem] = []
     @Published var selectedIds: Set<UUID> = []
     
+    // UI States migrated to ViewModel to avoid SwiftUI @State macro compilation issues on CLI
+    @Published var showingSettings = false
+    @Published var hoverSettings = false
+    @Published var hoverHide = false
+    @Published var hoverClear = false
+    @Published var gridContentHeight: CGFloat = 0
+    @Published var isHovered = false
+    @Published var isDragOver = false
+    
+    var hoverTimer: Timer? = nil
+    var collapseTimer: Timer? = nil
+    
+    @Published var hoveringItemIds: Set<UUID> = []
+    @Published var optionPressedItemIds: Set<UUID> = []
+    
     var selectedFiles: [FileItem] {
         files.filter { selectedIds.contains($0.id) }
     }

@@ -32,7 +32,10 @@ class EdgeTrigger: ObservableObject {
                     let screenWidth = targetScreen.frame.width
                     let screenMinX = targetScreen.frame.minX
                     
-                    let isAtTopEdge = mouseLocation.y >= screenMaxY - threshold
+                    // Use a larger threshold for the top edge (25.0) so it triggers before the user hits the physical screen edge.
+                    // Hitting the physical top edge while dragging triggers macOS Mission Control Spaces.
+                    let topThreshold: CGFloat = 25.0
+                    let isAtTopEdge = mouseLocation.y >= screenMaxY - topThreshold
                     let centerMinX = screenMinX + (screenWidth * 0.3)
                     let centerMaxX = screenMinX + (screenWidth * 0.7)
                     let isAtHorizontalCenter = mouseLocation.x >= centerMinX && mouseLocation.x <= centerMaxX

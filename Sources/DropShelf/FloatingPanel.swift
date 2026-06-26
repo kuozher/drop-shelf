@@ -5,7 +5,7 @@ class FloatingPanel: NSPanel {
     init(contentRect: NSRect, backing: NSWindow.BackingStoreType, defer flag: Bool) {
         super.init(
             contentRect: contentRect,
-            styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView],
+            styleMask: [.nonactivatingPanel, .borderless],
             backing: backing,
             defer: flag
         )
@@ -13,21 +13,28 @@ class FloatingPanel: NSPanel {
         // Make it floating and transparent
         self.isFloatingPanel = true
         self.level = .floating
-        self.hidesOnDeactivate = false // CRITICAL: Stop auto-hiding on drag-out
+        self.hidesOnDeactivate = false
         self.isMovableByWindowBackground = false 
-        self.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.9)
-        self.hasShadow = true
-        self.titleVisibility = .hidden
-        self.titlebarAppearsTransparent = true
-        self.standardWindowButton(.closeButton)?.isHidden = true
-        self.standardWindowButton(.miniaturizeButton)?.isHidden = true
-        self.standardWindowButton(.zoomButton)?.isHidden = true
+        self.backgroundColor = .clear
+        self.isOpaque = false
+        self.hasShadow = false
         
-        // Behavior: don't activate the app, and allow clicks to pass through if needed (though we want drops)
+        // Behavior: don't activate the app, and allow clicks to pass through if needed
         self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
     }
     
     override var canBecomeKey: Bool {
         return true
+    }
+    
+    // Bypass macOS automatic window position clamping.
+    // By default, NSWindow.constrainFrameRect clips the frame to visibleFrame,
+    // which pushes the window below the Menu Bar / Notch area.
+    // Returning the unconstrained rect for topCenter allows flush alignment.
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        if AppSettings.shared.position == .topCenter {
+            return frameRect
+        }
+        return super.constrainFrameRect(frameRect, to: screen)
     }
 }

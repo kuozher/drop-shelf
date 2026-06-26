@@ -6,15 +6,6 @@ struct ContentView: View {
     @StateObject var viewModel = FileShelfViewModel()
     @StateObject var settings = AppSettings.shared
     
-    // UI State
-    @State private var showingSettings = false
-    @State private var hoverSettings = false
-    @State private var hoverHide = false
-    @State private var hoverClear = false
-    
-    // Layout State
-    @State private var gridContentHeight: CGFloat = 0
-    
     // Grid Configuration
     let columns = [
         GridItem(.fixed(80)),
@@ -25,170 +16,241 @@ struct ContentView: View {
     // Max allowable height for the window
     let maxWindowHeight: CGFloat = 600
     
+    // Notch/menu bar height for the current screen
+    private var notchHeight: CGFloat {
+        guard settings.position == .topCenter,
+              let screen = NSScreen.main else { return 0 }
+        return screen.frame.maxY - screen.visibleFrame.maxY
+    }
+    
     var body: some View {
-        VStack(spacing: 0) {
-            
-            // ================= HEADER =================
-            HStack(spacing: 8) {
-                Text("\(viewModel.files.count) items")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.secondary)
-                
-                if viewModel.selectedCount > 0 {
-                    Text("(\(viewModel.selectedCount) selected)")
-                        .font(.system(size: 10))
-                        .foregroundColor(.blue)
-                }
-                
-                Spacer()
-                
-                // Settings Button
-                Button(action: { showingSettings.toggle() }) {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 14))
-                        .foregroundColor(hoverSettings ? .blue : .gray)
-                        .frame(width: 24, height: 24)
-                        .background(hoverSettings ? Color.gray.opacity(0.15) : Color.clear)
-                        .cornerRadius(6)
-                }
-                .buttonStyle(.plain)
-                .onHover { hoverSettings = $0 }
-                .popover(isPresented: $showingSettings) {
-                    SettingsView(settings: settings)
-                        .padding()
-                }
-                
-                // Hide Button
-                Button(action: {
-                    NSApp.sendAction(#selector(AppDelegate.hideWindow), to: nil, from: nil)
-                }) {
-                    Image(systemName: settings.position == .topCenter ? "chevron.up.2" : (settings.position.rawValue.contains("left") ? "chevron.left.2" : "chevron.right.2"))
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(hoverHide ? .blue : .gray)
-                        .frame(width: 24, height: 24)
-                        .background(hoverHide ? Color.gray.opacity(0.15) : Color.clear)
-                        .cornerRadius(6)
-                }
-                .buttonStyle(.plain)
-                .onHover { hoverHide = $0 }
-            }
-            .padding(.horizontal, 12)
-            .padding(.top, 4) // Reduced from 8 to force top alignment
-            .padding(.bottom, 6)
-            .background(Color(NSColor.windowBackgroundColor).opacity(0.1))
-            .contentShape(Rectangle())
-            .onTapGesture { 
-                viewModel.deselectAll()
-                NSApp.activate(ignoringOtherApps: true)
-                NSApp.keyWindow?.makeFirstResponder(nil)
-            }
-            
-            Divider()
-            
-            // ================= CONTENT =================
-            ZStack {
-                if viewModel.files.isEmpty {
-                    VStack(spacing: 10) {
-                        Image(systemName: "tray.and.arrow.down")
-                            .font(.system(size: 30))
-                            .foregroundColor(.secondary.opacity(0.5))
-                        Text("Drop Files Here")
-                            .font(.headline)
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 120)
+        Group {
+            VStack(spacing: 0) {
+                if settings.position == .topCenter && settings.isCollapsed {
+                    CollapsedNotchView(viewModel: viewModel, settings: settings)
+                        // Ignore hover on the notch view itself because the mouse can't reach it
                 } else {
-                    ScrollView(.vertical, showsIndicators: true) {
-                        LazyVGrid(columns: columns, spacing: 15) {
-                            ForEach(viewModel.files) { item in
-                                FileView(
-                                    item: item,
-                                    isSelected: viewModel.selectedIds.contains(item.id),
-                                    viewModel: viewModel,
-                                    onRemove: { viewModel.removeFile(withURL: item.url) }
+                VStack(spacing: 0) {
+                    
+                    // Notch area spacer: fills the region behind the physical notch
+                    if settings.position == .topCenter {
+                        Color.black.frame(height: notchHeight)
+                    }
+                    
+                    // ================= HEADER =================
+                    HStack(spacing: 8) {
+                        Text("\(viewModel.files.count) items")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(settings.position == .topCenter ? .gray : .secondary)
+                        
+                        if viewModel.selectedCount > 0 {
+                            Text("(\(viewModel.selectedCount) selected)")
+                                .font(.system(size: 10))
+                                .foregroundColor(.blue)
+                        }
+                        
+                        Spacer()
+                        
+                        // Settings Button
+                        Button(action: { viewModel.showingSettings.toggle() }) {
+                            Image(systemName: "gearshape.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(viewModel.hoverSettings ? .blue : .gray)
+                                .frame(width: 24, height: 24)
+                                .background(viewModel.hoverSettings ? Color.gray.opacity(0.15) : Color.clear)
+                                .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
+                        .onHover { viewModel.hoverSettings = $0 }
+                        .popover(isPresented: Binding(
+                            get: { viewModel.showingSettings },
+                            set: { viewModel.showingSettings = $0 }
+                        )) {
+                            SettingsView(viewModel: viewModel)
+                                .padding()
+                        }
+                        
+                        // Hide Button
+                        Button(action: {
+                            NSApp.sendAction(#selector(AppDelegate.hideWindow), to: nil, from: nil)
+                        }) {
+                            Image(systemName: settings.position == .topCenter ? "chevron.up.2" : (settings.position.rawValue.contains("left") ? "chevron.left.2" : "chevron.right.2"))
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(viewModel.hoverHide ? .blue : .gray)
+                                .frame(width: 24, height: 24)
+                                .background(viewModel.hoverHide ? Color.gray.opacity(0.15) : Color.clear)
+                                .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
+                        .onHover { viewModel.hoverHide = $0 }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.top, 4)
+                    .padding(.bottom, 6)
+                    .background(settings.position == .topCenter ? Color.white.opacity(0.05) : Color(NSColor.windowBackgroundColor).opacity(0.1))
+                    .contentShape(Rectangle())
+                    .onTapGesture { 
+                        viewModel.deselectAll()
+                        NSApp.activate(ignoringOtherApps: true)
+                        NSApp.keyWindow?.makeFirstResponder(nil)
+                    }
+                    
+                    Divider()
+                    
+                    // ================= CONTENT =================
+                    ZStack {
+                        if viewModel.files.isEmpty {
+                            VStack(spacing: 10) {
+                                Image(systemName: "tray.and.arrow.down")
+                                    .font(.system(size: 30))
+                                    .foregroundColor(settings.position == .topCenter ? .gray.opacity(0.5) : .secondary.opacity(0.5))
+                                Text("Drop Files Here")
+                                    .font(.headline)
+                                    .foregroundColor(settings.position == .topCenter ? .gray : .secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 120)
+                        } else {
+                            ScrollView(.vertical, showsIndicators: true) {
+                                LazyVGrid(columns: columns, spacing: 15) {
+                                    ForEach(viewModel.files) { item in
+                                        FileView(
+                                            item: item,
+                                            isSelected: viewModel.selectedIds.contains(item.id),
+                                            viewModel: viewModel,
+                                            onRemove: { viewModel.removeFile(withURL: item.url) }
+                                        )
+                                    }
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 15)
+                                .background(
+                                    GeometryReader { geo in
+                                        Color.clear.preference(key: GridHeightPreferenceKey.self, value: geo.size.height)
+                                    }
                                 )
                             }
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 15)
-                        .background(
-                            GeometryReader { geo in
-                                Color.clear.preference(key: GridHeightPreferenceKey.self, value: geo.size.height)
-                            }
-                        )
-                    }
-                    .frame(height: min(gridContentHeight, maxAllowedContentHeight))
-                    .onPreferenceChange(GridHeightPreferenceKey.self) { newHeight in
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            self.gridContentHeight = newHeight
-                        }
-                    }
-                }
-            }
-            .contentShape(Rectangle())
-            .onTapGesture { 
-                viewModel.deselectAll()
-                NSApp.activate(ignoringOtherApps: true)
-                NSApp.keyWindow?.makeFirstResponder(nil)
-            }
-            .background(
-                Button("") { viewModel.selectAll() }
-                    .keyboardShortcut("a", modifiers: .command)
-                    .buttonStyle(.plain)
-                    .allowsHitTesting(false)
-                    .opacity(0)
-            )
-            .onDrop(of: [.fileURL], isTargeted: nil) { providers in
-                for provider in providers {
-                    _ = provider.loadObject(ofClass: URL.self) { url, _ in
-                        if let url = url {
-                            DispatchQueue.main.async {
-                                viewModel.addFile(url: url)
+                            .frame(height: min(viewModel.gridContentHeight, maxAllowedContentHeight))
+                            .onPreferenceChange(GridHeightPreferenceKey.self) { newHeight in
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    viewModel.gridContentHeight = newHeight
+                                }
                             }
                         }
                     }
+                    .contentShape(Rectangle())
+                    .onTapGesture { 
+                        viewModel.deselectAll()
+                        NSApp.activate(ignoringOtherApps: true)
+                        NSApp.keyWindow?.makeFirstResponder(nil)
+                    }
+                    .background(
+                        Button("") { viewModel.selectAll() }
+                            .keyboardShortcut("a", modifiers: .command)
+                            .buttonStyle(.plain)
+                            .allowsHitTesting(false)
+                            .opacity(0)
+                    )
+                    
+                    Divider()
+                    
+                    // ================= FOOTER =================
+                    HStack {
+                        if !viewModel.files.isEmpty {
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.2)) { viewModel.clearAll() }
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "broom.fill")
+                                        .font(.system(size: 13))
+                                    Text("Clear All")
+                                        .font(.system(size: 11, weight: .medium))
+                                }
+                                .foregroundColor(viewModel.hoverClear ? .blue : .blue.opacity(0.8))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(viewModel.hoverClear ? Color.blue.opacity(0.2) : Color.blue.opacity(0.1))
+                                .cornerRadius(6)
+                            }
+                            .buttonStyle(.plain)
+                            .onHover { viewModel.hoverClear = $0 }
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.top, 6)
+                    .padding(.bottom, 4)
+                    .background(Color(NSColor.windowBackgroundColor).opacity(0.05))
+                    .contentShape(Rectangle())
+                    .onTapGesture { 
+                        viewModel.deselectAll()
+                        NSApp.activate(ignoringOtherApps: true)
+                    }
                 }
-                return true
+                .frame(width: settings.position == .topCenter ? 348 : 300)
+                .background(settings.position == .topCenter ? Color.black.opacity(0.95) : Color(NSColor.windowBackgroundColor).opacity(0.95))
+                .clipShape(UnevenRoundedRectangle(
+                    topLeadingRadius: settings.position == .topCenter ? 0 : 16,
+                    bottomLeadingRadius: 16,
+                    bottomTrailingRadius: 16,
+                    topTrailingRadius: settings.position == .topCenter ? 0 : 16
+                ))
+                .onHover { hovering in
+                    viewModel.isHovered = hovering
+                    // Local onHover logic for other positions
+                    if !hovering && settings.position != .topCenter {
+                        viewModel.collapseTimer?.invalidate()
+                        viewModel.collapseTimer = Timer.scheduledTimer(withTimeInterval: 0.6, repeats: false) { _ in
+                            guard !viewModel.isHovered && !viewModel.showingSettings && !settings.isDraggingOut else { return }
+                            withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+                                settings.isCollapsed = true
+                            }
+                        }
+                    } else {
+                        viewModel.collapseTimer?.invalidate()
+                    }
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
-
-            Divider()
             
-            // ================= FOOTER =================
-            HStack {
-                if !viewModel.files.isEmpty {
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.2)) { viewModel.clearAll() }
-                    }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "broom.fill")
-                                .font(.system(size: 13))
-                            Text("Clear All")
-                                .font(.system(size: 11, weight: .medium))
-                        }
-                        .foregroundColor(hoverClear ? .blue : .blue.opacity(0.8))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(hoverClear ? Color.blue.opacity(0.2) : Color.blue.opacity(0.1))
-                        .cornerRadius(6)
-                    }
-                    .buttonStyle(.plain)
-                    .onHover { hoverClear = $0 }
-                }
-                
+            // Push content to the top for topCenter since the NSWindow is permanently full-size
+            if settings.position == .topCenter {
                 Spacer()
             }
-            .padding(.horizontal, 12)
-            .padding(.top, 6)
-            .padding(.bottom, 4) // Reduced from 6 to force bottom alignment
-            .background(Color(NSColor.windowBackgroundColor).opacity(0.05))
-            .contentShape(Rectangle())
-            .onTapGesture { 
-                viewModel.deselectAll()
-                NSApp.activate(ignoringOtherApps: true)
+        } // Closes the new VStack
+        .frame(width: settings.position == .topCenter ? 348 : 300)
+        } // Closes the Group
+        .onChange(of: settings.isCollapsed) { collapsed in
+            if settings.position == .topCenter {
+                if !collapsed {
+                    startGlobalHoverCheck()
+                } else {
+                    viewModel.hoverTimer?.invalidate()
+                }
             }
         }
-        .frame(width: 300)
+        .onChange(of: viewModel.showingSettings) { showing in
+            if !showing {
+                // When settings close, we check if we should auto-collapse based on current mouse position
+                if settings.position != .topCenter {
+                    // For side edges, if mouse is not hovering the main window, we must start the timer manually
+                    // because closing the popover doesn't trigger an onHover event if the mouse is over the desktop
+                    if !viewModel.isHovered {
+                        viewModel.collapseTimer?.invalidate()
+                        viewModel.collapseTimer = Timer.scheduledTimer(withTimeInterval: 0.6, repeats: false) { _ in
+                            guard !viewModel.isHovered && !viewModel.showingSettings && !settings.isDraggingOut else { return }
+                            withAnimation(.spring(response: 0.4, dampingFraction: 1.0)) {
+                                settings.isCollapsed = true
+                            }
+                        }
+                    }
+                } else {
+                    // For topCenter, the continuous startGlobalHoverCheck will naturally pick it up,
+                    // but we can force an immediate check just to be perfectly responsive.
+                }
+            }
+        }
         .onTapGesture {
             NSApp.activate(ignoringOtherApps: true)
             NSApp.keyWindow?.makeFirstResponder(nil)
@@ -199,8 +261,10 @@ struct ContentView: View {
             }
         )
         .onPreferenceChange(ContentHeightPreferenceKey.self) { newHeight in
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(name: .windowHeightChanged, object: nil, userInfo: ["height": newHeight])
+            if !(settings.position == .topCenter && settings.isCollapsed) {
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: .windowHeightChanged, object: nil, userInfo: ["height": newHeight])
+                }
             }
         }
         .frame(maxHeight: maxWindowHeight)
@@ -214,7 +278,29 @@ struct ContentView: View {
         .onChange(of: viewModel.files.isEmpty) { isEmpty in
             if isEmpty {
                 withAnimation(.snappy(duration: 0.2)) {
-                    self.gridContentHeight = 0
+                    viewModel.gridContentHeight = 0
+                }
+            }
+        }
+        .onDrop(of: [.fileURL], isTargeted: Binding(
+            get: { viewModel.isDragOver },
+            set: { viewModel.isDragOver = $0 }
+        )) { providers in
+            for provider in providers {
+                _ = provider.loadObject(ofClass: URL.self) { url, _ in
+                    if let url = url {
+                        DispatchQueue.main.async {
+                            viewModel.addFile(url: url)
+                        }
+                    }
+                }
+            }
+            return true
+        }
+        .onChange(of: viewModel.isDragOver) { over in
+            if over && settings.position == .topCenter && settings.isCollapsed {
+                withAnimation(.spring(response: 0.4, dampingFraction: 1.0)) {
+                    settings.isCollapsed = false
                 }
             }
         }
@@ -226,12 +312,62 @@ struct ContentView: View {
         let rows = ceil(Double(settings.displayCount) / 3.0)
         return (CGFloat(rows) * 110) + 30
     }
+    
+    // Global hover check to handle macOS notch deadzones
+    private func startGlobalHoverCheck() {
+        viewModel.hoverTimer?.invalidate()
+        viewModel.hoverTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+            // Only kill the timer if we are completely collapsed or moved away from topCenter
+            guard !settings.isCollapsed, settings.position == .topCenter else {
+                viewModel.hoverTimer?.invalidate()
+                return
+            }
+            
+            // Just pause the tracking if settings are open or dragging
+            guard !viewModel.showingSettings, !settings.isDraggingOut else { return }
+            
+            // Check global mouse position against a safe zone (window center + ~200px padding)
+            let mouseLoc = NSEvent.mouseLocation
+            guard let screen = NSScreen.screens.first(where: { NSMouseInRect(mouseLoc, $0.frame, false) }) else { return }
+            
+            let safeWidth: CGFloat = 348 + 100 // 50px padding on each side
+            let safeHeight: CGFloat = self.maxAllowedContentHeight + notchHeight + 100
+            
+            let minX = screen.frame.midX - (safeWidth / 2)
+            let maxX = screen.frame.midX + (safeWidth / 2)
+            let minY = screen.frame.maxY - safeHeight
+            let maxY = screen.frame.maxY
+            
+            let isInside = mouseLoc.x >= minX && mouseLoc.x <= maxX && mouseLoc.y >= minY && mouseLoc.y <= maxY
+            
+            if !isInside {
+                // Only start the 0.6s timer if we haven't already started it
+                if viewModel.collapseTimer == nil || !viewModel.collapseTimer!.isValid {
+                    viewModel.collapseTimer = Timer.scheduledTimer(withTimeInterval: 0.6, repeats: false) { _ in
+                        let currentMouse = NSEvent.mouseLocation
+                        let stillOutside = !(currentMouse.x >= minX && currentMouse.x <= maxX && currentMouse.y >= minY && currentMouse.y <= maxY)
+                        
+                        if stillOutside && !viewModel.showingSettings && !settings.isDraggingOut {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 1.0)) {
+                                settings.isCollapsed = true
+                            }
+                            viewModel.hoverTimer?.invalidate()
+                        }
+                    }
+                }
+            } else {
+                viewModel.collapseTimer?.invalidate()
+                viewModel.collapseTimer = nil
+            }
+        }
+    }
 }
 
 // MARK: - Native Drag-and-Drop Overlay (Polished with Hit-Testing)
 struct NativeDragOverlay: NSViewRepresentable {
     let urls: () -> [URL]
     let onTap: () -> Void
+    let onDragStarted: () -> Void
     let onDragEnded: (NSDragOperation) -> Void
     let onHover: (Bool) -> Void
     
@@ -239,6 +375,7 @@ struct NativeDragOverlay: NSViewRepresentable {
         let view = NativeDragView()
         view.urlsProvider = urls
         view.onTap = onTap
+        view.onDragStarted = onDragStarted
         view.onDragEnded = onDragEnded
         view.onHoverChange = onHover
         return view
@@ -247,6 +384,7 @@ struct NativeDragOverlay: NSViewRepresentable {
     func updateNSView(_ nsView: NativeDragView, context: Context) {
         nsView.urlsProvider = urls
         nsView.onTap = onTap
+        nsView.onDragStarted = onDragStarted
         nsView.onDragEnded = onDragEnded
         nsView.onHoverChange = onHover
     }
@@ -255,6 +393,7 @@ struct NativeDragOverlay: NSViewRepresentable {
 class NativeDragView: NSView, NSDraggingSource {
     var urlsProvider: (() -> [URL])?
     var onTap: (() -> Void)?
+    var onDragStarted: (() -> Void)?
     var onDragEnded: ((NSDragOperation) -> Void)?
     var onHoverChange: ((Bool) -> Void)?
     
@@ -268,10 +407,6 @@ class NativeDragView: NSView, NSDraggingSource {
     
     // Hit-testing bypass for the removal button area
     override func hitTest(_ point: NSPoint) -> NSView? {
-        // Red minus button area: top-right corner in AppKit coordinates (0,0 is bottom-left)
-        // Overlay frame is 80x100.
-        // SwiftUI Button is centered in a ZStack but offset.
-        // Let's create a 25x25 bypass zone at the top-right.
         let removalZone = NSRect(x: bounds.width - 25, y: bounds.height - 25, width: 25, height: 25)
         if removalZone.contains(point) {
             return nil // Let event through to SwiftUI content below
@@ -335,6 +470,7 @@ class NativeDragView: NSView, NSDraggingSource {
             return item
         }
         
+        onDragStarted?()
         self.beginDraggingSession(with: draggingItems, event: event, source: self)
     }
     
@@ -343,8 +479,6 @@ class NativeDragView: NSView, NSDraggingSource {
     }
     
     func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
-        // Guard: If the drop happens INSIDE our own window, ignore any "Move" command.
-        // This prevents accidental removal when dragging items back to the shelf.
         var finalOperation = operation
         if let windowFrame = self.window?.frame, windowFrame.contains(screenPoint) {
             finalOperation = []
@@ -362,8 +496,13 @@ struct FileView: View {
     var isSelected: Bool
     @ObservedObject var viewModel: FileShelfViewModel
     var onRemove: () -> Void
-    @State private var isHovering = false
-    @State private var isOptionPressed = false
+    
+    var isHovering: Bool {
+        viewModel.hoveringItemIds.contains(item.id)
+    }
+    var isOptionPressed: Bool {
+        viewModel.optionPressedItemIds.contains(item.id)
+    }
     
     var body: some View {
         ZStack {
@@ -411,7 +550,7 @@ struct FileView: View {
                         }
                         .buttonStyle(.plain)
                         .offset(x: 5, y: -5)
-                        .zIndex(10) // Ensure it's on top within this ZStack
+                        .zIndex(10)
                     }
                 }
                 
@@ -432,7 +571,11 @@ struct FileView: View {
                     viewModel.selectItem(item.id, cumulative: flags.contains(.command), shift: flags.contains(.shift))
                     NSApp.activate(ignoringOtherApps: true)
                 },
+                onDragStarted: {
+                    AppSettings.shared.isDraggingOut = true
+                },
                 onDragEnded: { operation in
+                    AppSettings.shared.isDraggingOut = false
                     if operation != [] {
                         let isCopy = NSEvent.modifierFlags.contains(.option)
                         if !isCopy {
@@ -446,12 +589,20 @@ struct FileView: View {
                     }
                 },
                 onHover: { hovering in
-                    self.isHovering = hovering
-                    self.isOptionPressed = NSEvent.modifierFlags.contains(.option)
+                    if hovering {
+                        viewModel.hoveringItemIds.insert(item.id)
+                    } else {
+                        viewModel.hoveringItemIds.remove(item.id)
+                    }
+                    if NSEvent.modifierFlags.contains(.option) {
+                        viewModel.optionPressedItemIds.insert(item.id)
+                    } else {
+                        viewModel.optionPressedItemIds.remove(item.id)
+                    }
                 }
             )
             .frame(width: 80, height: 100)
-            .zIndex(1) // Overlay is above visuals but bypasses hit testing for the minus button
+            .zIndex(1)
         }
     }
 }
@@ -476,10 +627,12 @@ extension NSNotification.Name {
 }
 
 struct SettingsView: View {
-    @ObservedObject var settings: AppSettings
+    @ObservedObject var viewModel: FileShelfViewModel
+    @ObservedObject var settings = AppSettings.shared
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
+        VStack(alignment: .leading, spacing: 12) {
+            
             Text("Settings").font(.headline)
             Picker("Position", selection: $settings.position) {
                 ForEach(ScreenPosition.allCases) { pos in
@@ -495,7 +648,6 @@ struct SettingsView: View {
             Divider()
             
             HStack(spacing: 12) {
-                // Restart Button: Prominent Blue
                 Button("Restart App") {
                     let url = URL(fileURLWithPath: Bundle.main.resourcePath!)
                     let path = url.deletingLastPathComponent().deletingLastPathComponent().absoluteString
@@ -510,39 +662,143 @@ struct SettingsView: View {
                 
                 Spacer()
                 
-                // Quit Button: Outline (Gray) -> Hover (Solid Red)
                 QuitButton()
+                    .frame(width: 68, height: 20)
             }
         }
         .frame(width: 240)
     }
 }
 
-struct QuitButton: View {
-    @State private var isHovering = false
+// MARK: - Native QuitButton Wrapper (Bypassing @State on CLI)
+class HoverButton: NSButton {
+    private var trackingArea: NSTrackingArea?
+    private var isHovered = false {
+        didSet {
+            needsDisplay = true
+        }
+    }
+    
+    override func updateTrackingAreas() {
+        if let existing = trackingArea {
+            removeTrackingArea(existing)
+        }
+        let area = NSTrackingArea(
+            rect: bounds,
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(area)
+        trackingArea = area
+        super.updateTrackingAreas()
+    }
+    
+    override func mouseEntered(with event: NSEvent) {
+        isHovered = true
+    }
+    
+    override func mouseExited(with event: NSEvent) {
+        isHovered = false
+    }
+    
+    override func draw(_ dirtyRect: NSRect) {
+        if isHovered {
+            NSColor.systemRed.setFill()
+            let path = NSBezierPath(roundedRect: bounds, xRadius: 5, yRadius: 5)
+            path.fill()
+            
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.alignment = .center
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 11),
+                .foregroundColor: NSColor.white,
+                .paragraphStyle: paragraphStyle
+            ]
+            let size = title.size(withAttributes: attrs)
+            let rect = NSRect(x: 0, y: (bounds.height - size.height)/2, width: bounds.width, height: size.height)
+            title.draw(in: rect, withAttributes: attrs)
+        } else {
+            NSColor.clear.setFill()
+            let path = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 5, yRadius: 5)
+            path.fill()
+            NSColor.separatorColor.setStroke()
+            path.lineWidth = 1
+            path.stroke()
+            
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.alignment = .center
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 11),
+                .foregroundColor: NSColor.textColor,
+                .paragraphStyle: paragraphStyle
+            ]
+            let size = title.size(withAttributes: attrs)
+            let rect = NSRect(x: 0, y: (bounds.height - size.height)/2, width: bounds.width, height: size.height)
+            title.draw(in: rect, withAttributes: attrs)
+        }
+    }
+}
+
+struct QuitButton: NSViewRepresentable {
+    func makeNSView(context: Context) -> HoverButton {
+        let button = HoverButton()
+        button.title = "Quit App"
+        button.target = context.coordinator
+        button.action = #selector(Coordinator.quit)
+        button.isBordered = false
+        button.wantsLayer = true
+        return button
+    }
+    
+    func updateNSView(_ nsView: HoverButton, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+    
+    class Coordinator: NSObject {
+        @objc func quit() {
+            NSApp.terminate(nil)
+        }
+    }
+}
+
+// MARK: - Notch & Capsule Elements
+struct NotchShape: Shape {
+    let radius: CGFloat
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - radius))
+        path.addArc(center: CGPoint(x: rect.maxX - radius, y: rect.maxY - radius),
+                    radius: radius,
+                    startAngle: Angle(degrees: 0),
+                    endAngle: Angle(degrees: 90),
+                    clockwise: false)
+                    
+        path.addLine(to: CGPoint(x: rect.minX + radius, y: rect.maxY))
+        path.addArc(center: CGPoint(x: rect.minX + radius, y: rect.maxY - radius),
+                    radius: radius,
+                    startAngle: Angle(degrees: 90),
+                    endAngle: Angle(degrees: 180),
+                    clockwise: false)
+                    
+        path.closeSubpath()
+        return path
+    }
+}
+
+struct CollapsedNotchView: View {
+    @ObservedObject var viewModel: FileShelfViewModel
+    @ObservedObject var settings: AppSettings
     
     var body: some View {
-        Button(action: {
-            NSApp.terminate(nil)
-        }) {
-            Text("Quit App")
-                .font(.system(size: 11)) // Match standard small control size font
-                .foregroundColor(isHovering ? .white : .primary)
-                .frame(height: 20) // Standard small button height
-                .padding(.horizontal, 8)
-                .background(
-                    ZStack {
-                        if isHovering {
-                            RoundedRectangle(cornerRadius: 5)
-                                .fill(Color.red)
-                        } else {
-                            RoundedRectangle(cornerRadius: 5)
-                                .stroke(Color.gray.opacity(0.5), lineWidth: 1)
-                        }
-                    }
-                )
-        }
-        .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
+        // Fully hidden behind the physical notch - just be transparent and tiny
+        Color.clear
+            .frame(maxWidth: .infinity, maxHeight: 1)
     }
 }
