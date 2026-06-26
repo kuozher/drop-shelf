@@ -62,13 +62,6 @@ struct ContentView: View {
                         }
                         .buttonStyle(.plain)
                         .onHover { viewModel.hoverSettings = $0 }
-                        .popover(isPresented: Binding(
-                            get: { viewModel.showingSettings },
-                            set: { viewModel.showingSettings = $0 }
-                        )) {
-                            SettingsView(viewModel: viewModel)
-                                .padding()
-                        }
                         
                         // Hide Button
                         Button(action: {
@@ -99,7 +92,12 @@ struct ContentView: View {
                     
                     // ================= CONTENT =================
                     ZStack {
-                        if viewModel.files.isEmpty {
+                        if viewModel.showingSettings {
+                            SettingsView(viewModel: viewModel)
+                                .padding()
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .background(Color(NSColor.windowBackgroundColor))
+                        } else if viewModel.files.isEmpty {
                             VStack(spacing: 10) {
                                 Image(systemName: "tray.and.arrow.down")
                                     .font(.system(size: 30))
