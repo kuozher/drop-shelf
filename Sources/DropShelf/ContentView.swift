@@ -201,7 +201,7 @@ struct ContentView: View {
                     // Local onHover logic for other positions
                     if !hovering && settings.position != .topCenter {
                         viewModel.collapseTimer?.invalidate()
-                        viewModel.collapseTimer = Timer.scheduledTimer(withTimeInterval: 0.6, repeats: false) { _ in
+                        viewModel.collapseTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: false) { _ in
                             guard !viewModel.isHovered && !viewModel.showingSettings && !settings.isDraggingOut else { return }
                             withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
                                 settings.isCollapsed = true
@@ -238,7 +238,7 @@ struct ContentView: View {
                     // because closing the popover doesn't trigger an onHover event if the mouse is over the desktop
                     if !viewModel.isHovered {
                         viewModel.collapseTimer?.invalidate()
-                        viewModel.collapseTimer = Timer.scheduledTimer(withTimeInterval: 0.6, repeats: false) { _ in
+                        viewModel.collapseTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: false) { _ in
                             guard !viewModel.isHovered && !viewModel.showingSettings && !settings.isDraggingOut else { return }
                             withAnimation(.spring(response: 0.4, dampingFraction: 1.0)) {
                                 settings.isCollapsed = true
@@ -341,9 +341,9 @@ struct ContentView: View {
             let isInside = mouseLoc.x >= minX && mouseLoc.x <= maxX && mouseLoc.y >= minY && mouseLoc.y <= maxY
             
             if !isInside {
-                // Only start the 0.6s timer if we haven't already started it
+                // Only start the 0.4s timer if we haven't already started it
                 if viewModel.collapseTimer == nil || !viewModel.collapseTimer!.isValid {
-                    viewModel.collapseTimer = Timer.scheduledTimer(withTimeInterval: 0.6, repeats: false) { _ in
+                    viewModel.collapseTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: false) { _ in
                         let currentMouse = NSEvent.mouseLocation
                         let stillOutside = !(currentMouse.x >= minX && currentMouse.x <= maxX && currentMouse.y >= minY && currentMouse.y <= maxY)
                         

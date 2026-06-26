@@ -12,15 +12,15 @@ class FloatingPanel: NSPanel {
         
         // Make it floating and transparent
         self.isFloatingPanel = true
-        self.level = .floating
+        self.level = .screenSaver // High enough to appear over Mission Control
         self.hidesOnDeactivate = false
         self.isMovableByWindowBackground = false 
         self.backgroundColor = .clear
         self.isOpaque = false
         self.hasShadow = false
         
-        // Behavior: don't activate the app, and allow clicks to pass through if needed
-        self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        // Behavior: don't activate the app, allow clicks to pass through, and remain stationary during spaces/Mission Control
+        self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
     }
     
     override var canBecomeKey: Bool {
