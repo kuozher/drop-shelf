@@ -2,16 +2,6 @@ import SwiftUI
 import AppKit
 import Combine
 
-@main
-struct DropShelfApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    
-    var body: some Scene {
-        Settings {
-            EmptyView()
-        }
-    }
-}
 
 // Custom NSHostingView that handles routing AppKit dragging destination events
 class DragAwareHostingView<Content: View>: NSHostingView<Content> {
@@ -58,7 +48,15 @@ class DragAwareHostingView<Content: View>: NSHostingView<Content> {
     }
 }
 
+@main
 class AppDelegate: NSObject, NSApplicationDelegate {
+    public static func main() {
+        let app = NSApplication.shared
+        let delegate = AppDelegate()
+        app.delegate = delegate
+        app.run()
+    }
+    
     var panel: FloatingPanel!
     private var edgeTrigger = EdgeTrigger()
     private var isVisible = false
@@ -88,22 +86,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Setup Combine subscriptions for setting updates
         setupCombineSubscriptions()
         
-        // Show window immediately
-        showWindow()
+        // Show window immediately if topCenter or not collapsed
+        if settings.position == .topCenter || !settings.isCollapsed {
+            showWindow()
+        }
         
         edgeTrigger.onEdgeTouch = { [weak self] in
             print("Edge/Shake trigger received in AppDelegate")
             guard let self = self else { return }
             
-            if self.settings.position == .topCenter {
-                // If it's a top notch shelf, touching the top edge expands it
-                if self.settings.isCollapsed {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 1.0)) {
-                        self.settings.isCollapsed = false
-                    }
+            if self.settings.isCollapsed {
+                withAnimation(.spring(response: 0.4, dampingFraction: 1.0)) {
+                    self.settings.isCollapsed = false
                 }
-            } else {
-                self.showWindow()
             }
         }
         
@@ -137,7 +132,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     self.panel.hasShadow = false
                     self.panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelKey.mainMenuWindow.rawValue) + 1)
                 } else {
-                    self.settings.isCollapsed = false
+                    self.settings.isCollapsed = true
                     self.panel.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.9)
                     self.panel.hasShadow = true
                     self.panel.level = .floating
@@ -163,12 +158,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func handleCollapseChange(_ isCollapsed: Bool) {
-        guard settings.position == .topCenter else { return }
-        // We no longer resize the NSWindow here! The window is permanently fixed at 348x800.
-        // SwiftUI handles the internal animation.
-        // We just ensure it's frontmost when expanded.
-        if !isCollapsed {
-            panel.orderFrontRegardless()
+        if settings.position == .topCenter {
+            // We no longer resize the NSWindow here! The window is permanently fixed at 348x800.
+            // SwiftUI handles the internal animation.
+            // We just ensure it's frontmost when expanded.
+            if isCollapsed {
+                panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelKey.mainMenuWindow.rawValue) + 1)
+            } else {
+                panel.level = .popUpMenu
+                panel.orderFrontRegardless()
+            }
+        } else {
+            if isCollapsed {
+                hideWindow(animated: true)
+            } else {
+                showWindow()
+            }
         }
     }
     
@@ -186,7 +191,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func showWindow() {
         if settings.position == .topCenter {
-            panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelKey.mainMenuWindow.rawValue) + 1)
+            panel.level = settings.isCollapsed ? NSWindow.Level(rawValue: Int(CGWindowLevelKey.mainMenuWindow.rawValue) + 1) : .popUpMenu
         } else {
             panel.level = .floating
         }

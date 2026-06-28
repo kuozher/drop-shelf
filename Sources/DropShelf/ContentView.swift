@@ -62,10 +62,16 @@ struct ContentView: View {
                         }
                         .buttonStyle(.plain)
                         .onHover { viewModel.hoverSettings = $0 }
+                        .popover(isPresented: $viewModel.showingSettings) {
+                            SettingsView(viewModel: viewModel)
+                                .padding()
+                        }
                         
                         // Hide Button
                         Button(action: {
-                            NSApp.sendAction(#selector(AppDelegate.hideWindow), to: nil, from: nil)
+                            withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+                                settings.isCollapsed = true
+                            }
                         }) {
                             Image(systemName: settings.position == .topCenter ? "chevron.up.2" : (settings.position.rawValue.contains("left") ? "chevron.left.2" : "chevron.right.2"))
                                 .font(.system(size: 14, weight: .bold))
@@ -92,12 +98,7 @@ struct ContentView: View {
                     
                     // ================= CONTENT =================
                     ZStack {
-                        if viewModel.showingSettings {
-                            SettingsView(viewModel: viewModel)
-                                .padding()
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .background(Color(NSColor.windowBackgroundColor))
-                        } else if viewModel.files.isEmpty {
+                        if viewModel.files.isEmpty {
                             VStack(spacing: 10) {
                                 Image(systemName: "tray.and.arrow.down")
                                     .font(.system(size: 30))
@@ -249,6 +250,19 @@ struct ContentView: View {
                 }
             }
         }
+        .onChange(of: settings.isDraggingOut) { dragging in
+            if !dragging && settings.position != .topCenter {
+                if !viewModel.isHovered {
+                    viewModel.collapseTimer?.invalidate()
+                    viewModel.collapseTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: false) { _ in
+                        guard !viewModel.isHovered && !viewModel.showingSettings && !settings.isDraggingOut else { return }
+                        withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+                            settings.isCollapsed = true
+                        }
+                    }
+                }
+            }
+        }
         .onTapGesture {
             NSApp.activate(ignoringOtherApps: true)
             NSApp.keyWindow?.makeFirstResponder(nil)
@@ -296,9 +310,21 @@ struct ContentView: View {
             return true
         }
         .onChange(of: viewModel.isDragOver) { over in
-            if over && settings.position == .topCenter && settings.isCollapsed {
-                withAnimation(.spring(response: 0.4, dampingFraction: 1.0)) {
-                    settings.isCollapsed = false
+            if over {
+                if settings.position == .topCenter && settings.isCollapsed {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 1.0)) {
+                        settings.isCollapsed = false
+                    }
+                }
+            } else {
+                if settings.position != .topCenter {
+                    viewModel.collapseTimer?.invalidate()
+                    viewModel.collapseTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: false) { _ in
+                        guard !viewModel.isHovered && !viewModel.showingSettings && !settings.isDraggingOut && !viewModel.isDragOver else { return }
+                        withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+                            settings.isCollapsed = true
+                        }
+                    }
                 }
             }
         }

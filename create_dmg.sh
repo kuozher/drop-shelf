@@ -5,7 +5,11 @@
 
 APP_NAME="DropShelf"
 APP_BUNDLE="$APP_NAME.app"
-DMG_NAME="$APP_NAME.dmg"
+VERSION=$(grep -A 1 "CFBundleShortVersionString" "$APP_BUNDLE/Contents/Info.plist" | grep string | sed 's/<[^>]*>//g' | xargs)
+if [ -z "$VERSION" ]; then
+    VERSION="1.1.1"
+fi
+DMG_NAME="${APP_NAME}-v${VERSION}.dmg"
 STAGING_DIR="dmg_staging"
 
 echo "🚀 Preparing DMG for $APP_NAME..."

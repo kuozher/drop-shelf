@@ -45,6 +45,6 @@ class AppSettings: ObservableObject {
         let savedCount = UserDefaults.standard.integer(forKey: "displayCount")
         self.displayCount = savedCount > 0 ? savedCount : 3
         
-        self.isCollapsed = (self.position == .topCenter)
+        self.isCollapsed = true
     }
 }
