@@ -28,16 +28,19 @@ class EdgeTrigger: ObservableObject {
                 let screenMaxY = targetScreen.frame.maxY
                 
                 if position == .topCenter {
-                    // Top Center detection: mouse is at the top edge of screen, horizontally centered (middle 40%)
-                    let screenWidth = targetScreen.frame.width
-                    let screenMinX = targetScreen.frame.minX
+                    // 1. Calculate actual top bar / notch height dynamic to the screen
+                    let topBarHeight = targetScreen.frame.maxY - targetScreen.visibleFrame.maxY
                     
-                    // Use a larger threshold for the top edge (25.0) so it triggers before the user hits the physical screen edge.
-                    // Hitting the physical top edge while dragging triggers macOS Mission Control Spaces.
-                    let topThreshold: CGFloat = 25.0
+                    // 2. Determine top threshold based on whether user is dragging an item or just moving the mouse
+                    let isDragging = event.type == .leftMouseDragged
+                    let topThreshold = isDragging ? (topBarHeight + 15.0) : (topBarHeight + 3.0)
                     let isAtTopEdge = mouseLocation.y >= screenMaxY - topThreshold
-                    let centerMinX = screenMinX + (screenWidth * 0.3)
-                    let centerMaxX = screenMinX + (screenWidth * 0.7)
+                    
+                    // 3. Narrow the horizontal range to center 180pt (matching physical notch width)
+                    let midX = targetScreen.frame.midX
+                    let triggerWidth: CGFloat = 180.0
+                    let centerMinX = midX - (triggerWidth / 2)
+                    let centerMaxX = midX + (triggerWidth / 2)
                     let isAtHorizontalCenter = mouseLocation.x >= centerMinX && mouseLocation.x <= centerMaxX
                     
                     if isAtTopEdge && isAtHorizontalCenter {
